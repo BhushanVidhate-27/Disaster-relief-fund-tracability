@@ -1,25 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import dynamic from "next/dynamic";
-import {
-  DEFAULT_SCENARIO_ID,
-  getScenario,
-  type Village,
-} from "@/lib/data";
+import { useCaseStore, type Section } from "@/lib/useCaseStore";
 import { Landing } from "@/components/Landing";
 import { Overview } from "@/components/Overview";
 import { DamageSection } from "@/components/DamageSection";
 import { ReliefSection } from "@/components/ReliefSection";
 import { Recovery } from "@/components/Recovery";
 import { ThemeToggle } from "@/components/ThemeToggle";
-
-const VillageMap = dynamic(
-  () => import("@/components/VillageMap").then((m) => m.VillageMap),
-  { ssr: false }
-);
-
-type Section = "overview" | "damage" | "relief" | "recovery";
 
 const NAV: { id: Section; label: string; number: string }[] = [
   { id: "overview", label: "Overview", number: "01" },
@@ -29,50 +16,14 @@ const NAV: { id: Section; label: string; number: string }[] = [
 ];
 
 export default function App() {
-  const [screen, setScreen] = useState<"home" | "case">("home");
-  const [section, setSection] = useState<Section>("overview");
-  const [scenarioId, setScenarioId] = useState(DEFAULT_SCENARIO_ID);
-  const [villages, setVillages] = useState<Village[]>(getScenario(DEFAULT_SCENARIO_ID).villages);
-  const [selectedId, setSelectedId] = useState<string | null>(getScenario(DEFAULT_SCENARIO_ID).villages[0]?.id ?? null);
-  const [assessed, setAssessed] = useState(false);
-  const [day, setDay] = useState(0);
+  const s = useCaseStore();
 
-  const scenario = getScenario(scenarioId);
+  if (!s.hydrated) {
+    return <div className="min-h-screen bg-ground" />;
+  }
 
-  const selectScenario = useCallback((id: string) => {
-    const s = getScenario(id);
-    setScenarioId(id);
-    setVillages(s.villages);
-    setSelectedId(s.villages[0]?.id ?? null);
-    setAssessed(false);
-    setDay(0);
-    setSection("overview");
-  }, []);
-
-  const disburse = useCallback((id: string) => {
-    setVillages((vs) =>
-      vs.map((v) =>
-        v.id === id && (v.status === "PENDING" || v.status === "ALLOCATED")
-          ? { ...v, status: "DISBURSED", disbursed: v.approved, utilized: v.approved * 0.8 }
-          : v
-      )
-    );
-  }, []);
-
-  const advanceDay = useCallback(() => setDay((d) => (d >= 30 ? d : 30)), []);
-
-  const complete = useCallback((id: string) => {
-    setVillages((vs) =>
-      vs.map((v) =>
-        v.id === id && v.status === "DISBURSED"
-          ? { ...v, status: "COMPLETED", progress: 100, completedOn: "Day 30 · 12 Oct 2018" }
-          : v
-      )
-    );
-  }, []);
-
-  if (screen === "home") {
-    return <Landing onEnter={() => setScreen("case")} />;
+  if (s.screen === "home") {
+    return <Landing onEnter={s.selectScenario} />;
   }
 
   return (
@@ -84,17 +35,16 @@ export default function App() {
             <div className="min-w-0">
               <button
                 type="button"
-                onClick={() => setScreen("home")}
+                onClick={s.openIndex}
                 className="press block font-mono text-[12px] font-semibold tracking-[0.18em] text-ink"
               >
                 INNOVISION
               </button>
-              <span className="block truncate text-[10px] text-faint">Disaster response intelligence</span>
             </div>
             <span aria-hidden className="mx-1 hidden h-8 w-px bg-line/25 sm:block" />
             <div className="hidden min-w-0 sm:block">
-              <div className="truncate text-[12px] font-medium text-ink">{scenario.meta.name} <span className="font-mono text-faint">{scenario.meta.year}</span></div>
-              <div className="truncate text-[10px] text-faint">{scenario.meta.place}</div>
+              <div className="truncate text-[12px] font-medium text-ink">{s.scenario.meta.name} <span className="font-mono text-faint">{s.scenario.meta.year}</span></div>
+              <div className="truncate text-[10px] text-faint">{s.scenario.meta.place}</div>
             </div>
           </div>
           <nav aria-label="Case workflow" className="flex max-w-full items-center gap-1 overflow-x-auto">
@@ -102,60 +52,62 @@ export default function App() {
             <button
               key={n.id}
               type="button"
-              aria-current={section === n.id ? "page" : undefined}
-              onClick={() => setSection(n.id)}
+              aria-current={s.section === n.id ? "page" : undefined}
+              onClick={() => s.setSection(n.id)}
               className={`press flex shrink-0 items-center gap-2 rounded-panel border px-3 py-2 text-[11px] transition-colors ${
-                section === n.id
+                s.section === n.id
                   ? "border-signal/35 bg-signal/10 text-ink"
                   : "border-transparent text-muted hover:border-line/25 hover:bg-panel-raised/60 hover:text-ink"
               }`}
             >
-              <span className={`font-mono text-[9px] ${section === n.id ? "text-signal" : "text-faint"}`}>{n.number}</span>
+              <span className={`font-mono text-[9px] ${s.section === n.id ? "text-signal" : "text-faint"}`}>{n.number}</span>
               <span>{n.label}</span>
             </button>
           ))}
+          <button
+            type="button"
+            onClick={s.reset}
+            title="Clear saved progress and reload the sample data"
+            className="press ml-1 shrink-0 rounded-panel border border-transparent px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-faint transition-colors hover:border-line/25 hover:text-ink"
+          >
+            Reset
+          </button>
           <ThemeToggle />
           </nav>
         </div>
       </header>
 
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        {section === "overview" && (
+        {s.section === "overview" && (
           <Overview
-            scenario={scenario.meta}
-            villages={villages}
-            assessed={assessed}
-            onSelectScenario={selectScenario}
-            onView={(v) => setSection(v)}
+            scenario={s.scenario.meta}
+            villages={s.villages}
+            assessed={s.assessed}
+            onSelectScenario={s.selectScenario}
           />
         )}
-        {section === "damage" && (
+        {s.section === "damage" && (
           <DamageSection
-            scenario={scenario.meta}
-            assessed={assessed}
-            onAssess={() => setAssessed(true)}
-            onNext={() => setSection("relief")}
+            scenario={s.scenario.meta}
+            assessed={s.assessed}
+            onAssess={() => s.setAssessed(true)}
+            onNext={() => s.setSection("relief")}
           />
         )}
-        {section === "relief" && (
+        {s.section === "relief" && (
           <ReliefSection
-            scenario={scenario.meta}
-            villages={villages}
-            selectedId={selectedId}
-            day={day}
-            onSelect={setSelectedId}
-            onDisburse={disburse}
-            onAdvanceDay={advanceDay}
-            onComplete={complete}
-            onViewRecovery={() => setSection("recovery")}
+            scenario={s.scenario.meta}
+            villages={s.villages}
+            selectedId={s.selectedId}
+            day={s.day}
+            onSelect={s.setSelectedId}
+            onDisburse={s.disburse}
+            onAdvanceDay={s.advanceDay}
+            onComplete={s.complete}
+            onViewRecovery={() => s.setSection("recovery")}
           />
         )}
-        {section === "recovery" && <Recovery villages={villages} />}
-
-        <p className="mt-8 border-t border-line/25 pt-4 font-mono text-[11px] leading-relaxed text-faint">
-          Every rupee is linked to a village. Every intervention is linked to
-          recovery. · All figures are demo data.
-        </p>
+        {s.section === "recovery" && <Recovery villages={s.villages} />}
       </main>
     </div>
   );

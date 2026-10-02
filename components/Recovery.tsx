@@ -42,20 +42,13 @@ export function Recovery({ villages }: { villages: Village[] }) {
         </div>
       </div>
 
-      <div className="flex items-end justify-between border-t border-line/25 pt-5">
-        <div>
-          <div className="font-mono text-[10px] uppercase tracking-widest text-faint">
-            Overall Recovery
-          </div>
-          <div className="mt-1 font-mono text-[40px] leading-none text-ink">
-            {overall}%
-          </div>
+      <div className="border-t border-line/25 pt-5">
+        <div className="font-mono text-[10px] uppercase tracking-widest text-faint">
+          Overall Recovery
         </div>
-        <p className="max-w-xs text-right font-mono text-[11px] leading-relaxed text-faint">
-          Every rupee is linked to a village.
-          <br />
-          Every intervention is linked to recovery.
-        </p>
+        <div className="mt-1 font-mono text-[40px] leading-none text-ink">
+          {overall}%
+        </div>
       </div>
     </div>
   );

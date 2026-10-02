@@ -186,8 +186,6 @@ function VillageDetail({
         <Row label="Restoration deadline" value={`${v.deadlineDays} days`} mono />
       </div>
 
-      <Lifecycle v={v} />
-
       <div className="mt-4 flex flex-wrap items-center gap-3">
         {canDisburse && (
           <button
@@ -242,33 +240,6 @@ function VillageDetail({
           />
         </div>
       </div>
-    </div>
-  );
-}
-
-function Lifecycle({ v }: { v: Village }) {
-  const steps = ["APPROVED", "DISBURSED", "UTILIZATION", "RESTORATION", "COMPLETED"];
-  const reached = [
-    true,
-    v.disbursed > 0,
-    v.utilized > 0,
-    v.status !== "PENDING" && v.status !== "ALLOCATED",
-    v.status === "COMPLETED",
-  ];
-  return (
-    <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line/25 pt-4">
-      {steps.map((step, i) => (
-        <span key={step} className="flex items-center gap-2">
-          {i > 0 && <span className="text-faint">↓</span>}
-          <span
-            className={`font-mono text-[10px] tracking-widest ${
-              reached[i] ? "text-signal" : "text-faint/50"
-            }`}
-          >
-            {step}
-          </span>
-        </span>
-      ))}
     </div>
   );
 }

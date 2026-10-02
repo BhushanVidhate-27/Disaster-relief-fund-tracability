@@ -5,6 +5,7 @@ import { MapContainer, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { scenarios, type ScenarioMeta } from "@/lib/data";
 import { BasemapToggle, FixMapSize, MapTiles, type BasemapMode } from "@/components/MapBasemap";
+import { basemapMaxZoom } from "@/lib/mapTiles";
 
 /** India-wide map: one marker per disaster event. */
 export function EventMapInner({
@@ -23,6 +24,7 @@ export function EventMapInner({
         center={[20.5, 80.5]}
         zoom={5}
         scrollWheelZoom
+        maxZoom={basemapMaxZoom(basemap)}
         className="h-full w-full"
         style={{ height: "100%", width: "100%", background: "var(--map-bg)" }}
       >

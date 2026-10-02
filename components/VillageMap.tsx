@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { MapContainer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusLabel, type Village } from "@/lib/data";
+import { basemapMaxZoom, providerLabel } from "@/lib/mapTiles";
 import { BasemapToggle, FixMapSize, MapTiles, type BasemapMode } from "@/components/MapBasemap";
 
 const statusColor: Record<string, string> = {
@@ -41,6 +42,7 @@ export function VillageMap({
         center={center}
         zoom={10}
         scrollWheelZoom={false}
+        maxZoom={basemapMaxZoom(basemap)}
         style={{ height: "100%", width: "100%", background: "var(--map-bg)" }}
       >
         <MapTiles mode={basemap} />
@@ -71,7 +73,7 @@ export function VillageMap({
       <BasemapToggle mode={basemap} onChange={setBasemap} />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-line/25 bg-ground-deep/90 px-3 py-1.5 font-mono text-[10px] text-faint">
         <span>
-          {basemap === "satellite" ? "SATELLITE · ESRI WORLD IMAGERY" : "MAP · OPENSTREETMAP"}
+          {providerLabel(basemap)}
         </span>
         <span>Click a village</span>
       </div>

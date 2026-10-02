@@ -76,7 +76,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 18.2,
         confidence: 94,
         description:
-          "Riverbank breach — surface water expansion detected via NDWI +0.38 vs baseline.",
+          "Riverbank breach — standing water across the north bank.",
         color: ZONE_COLORS.flood,
       },
       {
@@ -92,7 +92,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 12.4,
         confidence: 89,
         description:
-          "Vegetation loss — NDVI dropped from 0.62 to 0.21 in the catchment slope.",
+          "Vegetation loss across the plantation slope.",
         color: ZONE_COLORS.vegetation,
       },
       {
@@ -108,7 +108,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 8.5,
         confidence: 87,
         description:
-          "Infrastructure — road network severed, NDBI change +0.27 indicates soil/road exposure.",
+          "Access road cut, isolating the settlements behind it.",
         color: ZONE_COLORS.structural,
       },
     ];
@@ -129,7 +129,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 16.8,
         confidence: 92,
         description:
-          "Coastal erosion — shoreline retreated 280 m, detected via post-event NDWI.",
+          "Coastal strip — shoreline retreat and overtopping.",
         color: ZONE_COLORS.erosion,
       },
       {
@@ -146,7 +146,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 11.3,
         confidence: 88,
         description:
-          "Vegetation loss — coconut and mangrove canopy cleared, NDVI -0.41.",
+          "Wind blowdown — canopy stripped along the coast.",
         color: ZONE_COLORS.vegetation,
       },
       {
@@ -162,7 +162,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
         areaHa: 7.4,
         confidence: 85,
         description:
-          "Built-up damage — NDBI spike +0.33, roofing sheets displaced.",
+          "Built-up damage — roofing sheets displaced.",
         color: ZONE_COLORS.structural,
       },
     ];
@@ -182,7 +182,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
       areaHa: 9.7,
       confidence: 96,
       description:
-        "Landslide — slope exposure detected, NDBI +0.42, terrain shadow anomaly.",
+        "Landslide scar — exposed slope on the failed section.",
       color: ZONE_COLORS.structural,
     },
     {
@@ -198,7 +198,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
       areaHa: 6.8,
       confidence: 91,
       description:
-        "Debris — road blocked, sediment plume visible in post-imagery (NIR turbidity).",
+        "Debris fan — road blocked by slide material.",
       color: ZONE_COLORS.debris,
     },
     {
@@ -214,7 +214,7 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
       areaHa: 5.6,
       confidence: 90,
       description:
-        "Vegetation loss — NDVI dropped from 0.58 to 0.15 across hill slope.",
+        "Vegetation loss on the lower slope.",
       color: ZONE_COLORS.vegetation,
     },
   ];

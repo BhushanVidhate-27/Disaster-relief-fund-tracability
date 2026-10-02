@@ -2,45 +2,31 @@
 
 import { useEffect } from "react";
 import { TileLayer, useMap } from "react-leaflet";
-import {
-  ESRI_ATTRIB,
-  ESRI_LABELS_URL,
-  ESRI_SAT_URL,
-  OSM_ATTRIB,
-  OSM_URL,
-  type BasemapMode,
-} from "@/lib/mapTiles";
+import { basemapLayers, type BasemapMode } from "@/lib/mapTiles";
 
 export type { BasemapMode };
 
-/** Street or satellite tiles. Satellite includes place-name overlay. */
+/**
+ * Street or satellite tiles. Satellite includes place labels. The layer stack
+ * comes from lib/mapTiles so every map shares one provider decision.
+ */
 export function MapTiles({ mode }: { mode: BasemapMode }) {
-  if (mode === "satellite") {
-    return (
-      <>
-        <TileLayer
-          key="esri-sat"
-          url={ESRI_SAT_URL}
-          attribution={ESRI_ATTRIB}
-          maxZoom={18}
-        />
-        <TileLayer
-          key="esri-labels"
-          url={ESRI_LABELS_URL}
-          attribution={ESRI_ATTRIB}
-          maxZoom={18}
-        />
-      </>
-    );
-  }
-
   return (
-    <TileLayer
-      key="osm"
-      url={OSM_URL}
-      attribution={OSM_ATTRIB}
-      maxZoom={19}
-    />
+    <>
+      {basemapLayers(mode).map((tile, i) => (
+        <TileLayer
+          key={`${tile.url.slice(0, 40)}-${i}`}
+          url={tile.url}
+          attribution={tile.attribution}
+          minZoom={tile.minZoom}
+          maxZoom={tile.maxZoom}
+          maxNativeZoom={tile.maxNativeZoom}
+          detectRetina={tile.detectRetina}
+          keepBuffer={2}
+          updateWhenIdle
+        />
+      ))}
+    </>
   );
 }
 

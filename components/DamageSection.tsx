@@ -9,7 +9,6 @@ import {
   getDamageZones,
   type DamageComputation,
   type DamageZone,
-  type DamageZoneType,
 } from "@/lib/damageAnalysis";
 
 const SatelliteMap = dynamic(
@@ -33,15 +32,8 @@ type AIStage =
 interface AIResult {
   computation: DamageComputation;
   zones: DamageZone[];
-  aiReport: string[];
-  aiSummary: string;
 }
 
-/**
- * Pre/post satellite comparison with a simulated AI change-detection
- * pipeline. Damage % is computed by grid-sampling the visible post-event
- * viewport against the detected polygons.
- */
 export function DamageSection({
   scenario,
   assessed,
@@ -69,36 +61,30 @@ export function DamageSection({
   }, [scenario.id]);
 
   const buildResult = useCallback(
-    (bounds: L.LatLngBounds): AIResult => {
-      const computation = computeDamageFromGrid(bounds, damageZones, 60);
-      return {
-        computation,
-        zones: damageZones,
-        aiReport: generateAIReport(scenario, computation, damageZones),
-        aiSummary: generateAISummary(scenario, computation),
-      };
-    },
-    [damageZones, scenario],
+    (bounds: L.LatLngBounds): AIResult => ({
+      computation: computeDamageFromGrid(bounds, damageZones, 60),
+      zones: damageZones,
+    }),
+    [damageZones],
   );
 
   const runAssessment = useCallback(async () => {
     if (!postBounds || aiStage !== "idle") return;
 
     setAiStage("loading-pre");
-    await sleep(400);
+    await sleep(300);
     setAiStage("loading-post");
-    await sleep(400);
+    await sleep(300);
     setAiStage("change-detection");
-    await sleep(600);
-    setAiStage("classification");
     await sleep(500);
+    setAiStage("classification");
+    await sleep(400);
 
     setAiResult(buildResult(postBounds));
     setAiStage("complete");
     onAssess();
   }, [postBounds, aiStage, buildResult, onAssess]);
 
-  // Restore results if the user already assessed, then left and came back.
   useEffect(() => {
     if (assessed && postBounds && !aiResult) {
       setAiResult(buildResult(postBounds));
@@ -113,20 +99,24 @@ export function DamageSection({
           Damage assessment
         </h2>
         <p className="mt-1 text-[13px] text-muted">
-          Compare pre- and post-event satellite imagery, then run AI change
-          detection to compute damaged area over {scenario.area}.
+          Compare the area before and after {scenario.preDate}, then run change
+          detection over {scenario.area}.
+        </p>
+        <p className="mt-1 text-[11px] text-faint">
+          Both panels show live current imagery. The dates are labels, not
+          imagery acquisitions.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <SatellitePanel
-          label="PRE-DISASTER"
+          label="BEFORE"
           date={scenario.preDate}
           variant="pre"
           scenario={scenario}
         />
         <SatellitePanel
-          label="POST-DISASTER"
+          label="AFTER"
           date={scenario.postDate}
           variant="post"
           scenario={scenario}
@@ -138,12 +128,9 @@ export function DamageSection({
       {!assessed && (
         <div className="flex flex-col items-start justify-between gap-3 rounded-panel border border-line/25 bg-panel p-4 sm:flex-row sm:items-center">
           <div className="text-[13px] text-muted">
-            Dual-temporal Sentinel-2 window{" "}
-            <span className="font-mono text-ink">
-              {scenario.preDate} → {scenario.postDate}
-            </span>
-            . Grid-sample the post view against detected polygons for a damage
-            percentage.
+            Sample the after view against{" "}
+            <span className="font-mono text-ink">{damageZones.length}</span>{" "}
+            detected zones on a 60×60 grid.
           </div>
           <button
             type="button"
@@ -151,7 +138,7 @@ export function DamageSection({
             disabled={!postBounds || aiStage !== "idle"}
             className="press shrink-0 rounded-panel bg-signal px-4 py-2 font-mono text-[12px] font-medium text-[rgb(var(--on-signal))] transition-colors hover:bg-signal/90 disabled:opacity-50"
           >
-            RUN DAMAGE ASSESSMENT
+            RUN ASSESSMENT
           </button>
         </div>
       )}
@@ -162,7 +149,7 @@ export function DamageSection({
             <span
               className={`h-3 w-3 animate-pulse rounded-full ${stageDotClass(aiStage)}`}
             />
-            AI CHANGE DETECTION IN PROGRESS
+            Change detection running
           </div>
           <div className="text-[12px] text-muted">{aiStageLabel(aiStage)}</div>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-line/10">
@@ -211,10 +198,11 @@ function SatellitePanel({
             onBoundsReady={onBoundsReady}
             damageZones={damageZones}
           />
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-line/25 bg-ground-deep/90 px-3 py-2 font-mono text-[10px] text-faint">
-            <span>SENTINEL-2 / 10 m</span>
-            <span>{variant === "pre" ? "BASELINE RGB" : "RGB · CHANGE OVERLAY"}</span>
-          </div>
+          {variant === "post" && (
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 border-t border-line/25 bg-ground-deep/90 px-3 py-2 font-mono text-[10px] text-faint">
+              Detected zones overlaid
+            </div>
+          )}
         </div>
       </div>
     </figure>
@@ -237,11 +225,10 @@ function stageDotClass(stage: AIStage): string {
 
 function aiStageLabel(stage: AIStage): string {
   const map: Record<string, string> = {
-    "loading-pre": "Ingesting pre-event Sentinel-2 capture…",
-    "loading-post": "Ingesting post-event Sentinel-2 capture…",
-    "change-detection":
-      "Running pixel-level NDVI / NDWI / NDBI change detection (60×60 grid)…",
-    classification: "Classifying damage polygons & synthesising AI report…",
+    "loading-pre": "Loading pre-event view…",
+    "loading-post": "Loading post-event view…",
+    "change-detection": "Sampling grid against detected zones…",
+    classification: "Aggregating damage polygons…",
   };
   return map[stage] ?? stage;
 }
@@ -258,69 +245,6 @@ function stageProgress(stage: AIStage): number {
   return map[stage] ?? 0;
 }
 
-function generateAIReport(
-  scenario: ScenarioMeta,
-  comp: DamageComputation,
-  zones: DamageZone[],
-): string[] {
-  const pct = comp.damagePercentage;
-  const lines: string[] = [
-    `AI DAMAGE ASSESSMENT REPORT — ${scenario.name}, ${scenario.year}`,
-    `Region: ${scenario.place} · ${scenario.area} · Window: ${scenario.preDate} → ${scenario.postDate}`,
-    `Algorithm: Sentinel-2 dual-temporal change detection (NDVI, NDWI, NDBI)`,
-    `Sampling grid: ${comp.totalSamplePoints} pts · ${comp.damagedPoints} flagged damaged · Coverage: ${pct}%`,
-    "",
-    "DETECTED DAMAGE ZONES:",
-  ];
-
-  zones.forEach((z) => {
-    const bt = comp.damageByType[z.type];
-    lines.push(
-      `  • ${z.name} — ${z.type.toUpperCase()} | ${z.areaHa} ha | ${z.confidence}% conf`,
-    );
-    lines.push(`    ${z.description}`);
-    if (bt.points > 0) {
-      lines.push(
-        `    Grid hits: ${bt.points} pts · avg conf ${bt.confidence}%`,
-      );
-    }
-  });
-
-  lines.push("");
-  lines.push(
-    `OVERALL DAMAGE INDEX: ${pct.toFixed(1)}% of the assessed viewport shows significant post-event change.`,
-  );
-  lines.push(
-    `Model confidence: ${Math.round(
-      zones.reduce((s, z) => s + z.confidence, 0) / zones.length,
-    )}% (mean across ${zones.length} zones).`,
-  );
-  lines.push("");
-  lines.push(
-    `RECOMMENDATION: Flag ${scenario.affectedVillages} nearest villages for on-ground verification and prioritise relief allocation.`,
-  );
-
-  return lines;
-}
-
-function generateAISummary(
-  scenario: ScenarioMeta,
-  comp: DamageComputation,
-): string {
-  const types = (
-    Object.entries(comp.damageByType) as [
-      DamageZoneType,
-      { points: number },
-    ][]
-  )
-    .filter(([, v]) => v.points > 0)
-    .map(([k]) => k)
-    .join(" + ");
-  return `${scenario.type} · ${comp.damagePercentage.toFixed(1)}% area damaged · ${
-    types || "no damage"
-  } detected via pre/post comparison`;
-}
-
 function AIDamageReport({
   result,
   scenario,
@@ -330,16 +254,8 @@ function AIDamageReport({
   scenario: ScenarioMeta;
   onNext: () => void;
 }) {
-  const { computation, zones, aiReport, aiSummary } = result;
-  const { damagePercentage, totalSamplePoints, damagedPoints, damageByType } =
-    computation;
-
-  const typeEntries = (
-    Object.entries(damageByType) as [
-      DamageZoneType,
-      { points: number; areaHa: number; confidence: number },
-    ][]
-  ).filter(([, v]) => v.points > 0);
+  const { computation, zones } = result;
+  const { damagePercentage, totalSamplePoints, damagedPoints } = computation;
 
   const detectedHa = zones.reduce((s, z) => s + z.areaHa, 0);
   const meanConf = Math.round(
@@ -352,7 +268,7 @@ function AIDamageReport({
         <Stat
           label="COMPUTED DAMAGE"
           value={`${damagePercentage.toFixed(1)}%`}
-          sub={`AI grid: ${damagedPoints}/${totalSamplePoints} pts`}
+          sub={`${damagedPoints}/${totalSamplePoints} grid points`}
         />
         <span className="hidden h-10 w-px bg-line/20 sm:block" />
         <Stat label="DETECTED AREA" value={`${detectedHa.toFixed(1)} ha`} />
@@ -360,66 +276,35 @@ function AIDamageReport({
         <Stat label="CONFIDENCE" value={`${meanConf}%`} />
         <span className="hidden h-10 w-px bg-line/20 sm:block" />
         <Stat
-          label="AFFECTED VILLAGES"
+          label="VILLAGES TO VERIFY"
           value={String(scenario.affectedVillages)}
         />
       </div>
 
-      <div className="mt-4 border-t border-line/25 pt-4">
-        <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-faint">
-          AI Analysis Report
-        </div>
-        <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">
-          {aiReport.map((line, i) => (
-            <span key={i} className="block">
-              {line || "\u00a0"}
-            </span>
-          ))}
-        </pre>
-        <div className="mt-3 font-mono text-[11px] text-signal">{aiSummary}</div>
-      </div>
-
-      {typeEntries.length > 0 && (
-        <div className="mt-4 border-t border-line/25 pt-3">
-          <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-faint">
-            Damage Type Breakdown
-          </div>
-          <div className="grid grid-cols-1 gap-x-8 gap-y-2 font-mono text-[11px] sm:grid-cols-2">
-            {typeEntries.map(([type, data]) => {
-              const zone = zones.find((z) => z.type === type);
-              return (
-                <div key={type} className="flex items-center gap-2">
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: zone?.color ?? "#888" }}
-                  />
-                  <span className="text-faint capitalize">{type}:</span>
-                  <span className="text-ink">
-                    {data.areaHa.toFixed(1)} ha · {data.points} pts ·{" "}
-                    {data.confidence}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <p className="mt-4 border-t border-line/25 pt-3 text-[11px] leading-relaxed text-faint">
+        Confidence and detected area are modelled. Recorded impact for this
+        event is on the Overview.
+      </p>
 
       <div className="mt-4 flex flex-col items-start justify-between gap-3 border-t border-line/25 pt-3 sm:flex-row sm:items-center">
         <span className="font-mono text-[11px] text-muted">
-          ✓ AI damage assessment completed — change detection & classification
-          finished.
+          {zones.length} zones · {damageZonesLabel(zones)}
         </span>
         <button
           type="button"
           onClick={onNext}
           className="press rounded-panel border border-line/40 bg-panel px-4 py-2 font-mono text-[12px] text-ink transition-colors hover:border-signal"
         >
-          CONTINUE → RELIEF DISTRIBUTION
+          CONTINUE →
         </button>
       </div>
     </div>
   );
+}
+
+function damageZonesLabel(zones: DamageZone[]): string {
+  const types = Array.from(new Set(zones.map((z) => z.type.toLowerCase())));
+  return types.join(", ");
 }
 
 function Stat({

@@ -17,6 +17,7 @@ import {
   type DamageZone,
 } from "@/lib/damageAnalysis";
 import { BasemapToggle, MapTiles, type BasemapMode } from "@/components/MapBasemap";
+import { basemapMaxZoom } from "@/lib/mapTiles";
 
 export interface SatelliteMapProps {
   scenario: ScenarioMeta;
@@ -76,6 +77,7 @@ export function SatelliteMap({
       zoom={scenario.zoom}
       scrollWheelZoom={false}
       minZoom={scenario.type === "Cyclone" ? 9 : 10}
+      maxZoom={basemapMaxZoom(basemap)}
       className={`h-full min-h-0 w-full ${
         variant === "pre" && basemap === "satellite" ? "sat-pre" : "sat-post"
       }`}

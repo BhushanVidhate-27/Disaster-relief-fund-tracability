@@ -23,7 +23,7 @@ export function EventSwitcher({
         <div className="mb-3 flex items-center justify-between">
           <div className="text-[13px] font-medium text-ink">Disaster Events · India</div>
           <div className="font-mono text-[10px] text-faint">
-            {scenarios.length} events · MAP / SAT · click to load
+            {scenarios.length} events · click to load
           </div>
         </div>
         <div className="darkmap min-h-0 flex-1 overflow-hidden rounded-panel border border-line/25">
@@ -32,11 +32,8 @@ export function EventSwitcher({
       </div>
 
       <div className="flex min-h-0 flex-col rounded-panel border border-line/25 bg-panel">
-        <div className="flex items-center justify-between border-b border-line/25 px-5 py-3">
-          <div className="text-[13px] font-medium text-ink">Recent Disaster Cases</div>
-          <div className="font-mono text-[10px] uppercase tracking-widest text-faint">
-            Demo data
-          </div>
+        <div className="border-b border-line/25 px-5 py-3 text-[13px] font-medium text-ink">
+          Cases
         </div>
         <ul className="min-h-0 flex-1 divide-y divide-line/15 overflow-y-auto">
           {scenarios.map((s) => {

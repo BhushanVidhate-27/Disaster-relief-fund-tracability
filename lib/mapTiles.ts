@@ -1,7 +1,7 @@
 /** Shared raster tiles for Leaflet maps. */
 
 export const ESRI_SAT_URL =
-  "https://server.arcgisonline.com/ArcGIS/rest/services/WorldImagery/MapServer/tile/{z}/{y}/{x}";
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 export const ESRI_LABELS_URL =
   "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}";
 export const ESRI_ATTRIB =

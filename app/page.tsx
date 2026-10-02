@@ -21,11 +21,11 @@ const VillageMap = dynamic(
 
 type Section = "overview" | "damage" | "relief" | "recovery";
 
-const NAV: { id: Section; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "damage", label: "Damage" },
-  { id: "relief", label: "Relief" },
-  { id: "recovery", label: "Recovery" },
+const NAV: { id: Section; label: string; number: string }[] = [
+  { id: "overview", label: "Overview", number: "01" },
+  { id: "damage", label: "Damage", number: "02" },
+  { id: "relief", label: "Relief", number: "03" },
+  { id: "recovery", label: "Recovery", number: "04" },
 ];
 
 export default function App() {
@@ -77,41 +77,49 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Minimal top navigation */}
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line/25 bg-ground-deep px-6 py-3">
-        <div className="flex items-baseline gap-3">
-          <button
-            type="button"
-            onClick={() => setScreen("home")}
-            className="press font-mono text-[13px] font-semibold tracking-[0.2em] text-ink"
-          >
-            INNOVISION
-          </button>
-          <span className="hidden font-mono text-[11px] text-faint sm:inline">
-            {scenario.meta.name} — {scenario.meta.year} · {scenario.meta.place}
-          </span>
-        </div>
-        <nav className="flex items-center gap-1">
+      <header className="sticky top-0 z-[1001] border-b border-line/25 bg-ground-deep">
+        <div className="mx-auto flex min-h-[68px] w-full max-w-[1440px] flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-panel border border-signal/35 bg-signal/10 font-mono text-[13px] font-semibold text-signal">I</span>
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => setScreen("home")}
+                className="press block font-mono text-[12px] font-semibold tracking-[0.18em] text-ink"
+              >
+                INNOVISION
+              </button>
+              <span className="block truncate text-[10px] text-faint">Disaster response intelligence</span>
+            </div>
+            <span aria-hidden className="mx-1 hidden h-8 w-px bg-line/25 sm:block" />
+            <div className="hidden min-w-0 sm:block">
+              <div className="truncate text-[12px] font-medium text-ink">{scenario.meta.name} <span className="font-mono text-faint">{scenario.meta.year}</span></div>
+              <div className="truncate text-[10px] text-faint">{scenario.meta.place}</div>
+            </div>
+          </div>
+          <nav aria-label="Case workflow" className="flex max-w-full items-center gap-1 overflow-x-auto">
           {NAV.map((n) => (
             <button
               key={n.id}
               type="button"
               aria-current={section === n.id ? "page" : undefined}
               onClick={() => setSection(n.id)}
-              className={`press rounded-panel px-3 py-1.5 text-[12px] transition-colors ${
+              className={`press flex shrink-0 items-center gap-2 rounded-panel border px-3 py-2 text-[11px] transition-colors ${
                 section === n.id
-                  ? "bg-panel-raised text-ink"
-                  : "text-muted hover:text-ink"
+                  ? "border-signal/35 bg-signal/10 text-ink"
+                  : "border-transparent text-muted hover:border-line/25 hover:bg-panel-raised/60 hover:text-ink"
               }`}
             >
-              {n.label}
+              <span className={`font-mono text-[9px] ${section === n.id ? "text-signal" : "text-faint"}`}>{n.number}</span>
+              <span>{n.label}</span>
             </button>
           ))}
           <ThemeToggle />
-        </nav>
+          </nav>
+        </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
         {section === "overview" && (
           <Overview
             scenario={scenario.meta}

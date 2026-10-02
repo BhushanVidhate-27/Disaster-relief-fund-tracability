@@ -4,6 +4,7 @@ import {
   fmtL,
   recoveryPct,
   statusLabel,
+  scenarios,
   type ScenarioMeta,
   type Village,
 } from "@/lib/data";
@@ -32,39 +33,68 @@ export function Overview({
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="mb-2 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-signal">
+            <span className="size-1.5 rounded-full bg-signal" />
+            Situation overview
+          </p>
+          <h1 className="text-[25px] font-semibold tracking-[-0.03em] text-ink sm:text-[29px]">Disaster response dashboard</h1>
+          <p className="mt-1 text-[12px] text-muted">Select an event to follow its evidence, relief and recovery.</p>
+        </div>
+        <span className="rounded-panel border border-line/25 bg-panel px-3 py-2 font-mono text-[9px] uppercase tracking-wider text-faint">Demo environment</span>
+      </div>
+
+      <dl className="grid grid-cols-2 divide-x divide-y divide-line/20 overflow-hidden rounded-panel border border-line/25 bg-panel sm:grid-cols-4 sm:divide-y-0">
+        <Snapshot label="Events monitored" value={String(scenarios.length).padStart(2, "0")} note="Across India" />
+        <Snapshot label="Villages mapped" value={String(villages.length).padStart(2, "0")} note={scenario.district} />
+        <Snapshot label="Case relief fund" value={fmtL(scenario.totalFund)} note={scenario.name} />
+        <Snapshot label="Recovery progress" value={`${overall}%`} note={`${completed} completed`} />
+      </dl>
+
       {/* Multi-event map + case list */}
       <EventSwitcher selected={scenario} onSelect={onSelectScenario} />
 
       {/* Case header */}
-      <div className="border-b border-line/25 pb-5">
-        <h2 className="text-[22px] font-semibold tracking-tight text-ink">
-          {scenario.name} — {scenario.year}
-        </h2>
-        <p className="mt-1 text-[13px] text-muted">{scenario.place} · Demo data</p>
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-line/25 pb-4">
+        <div>
+          <p className="mb-1 font-mono text-[9px] uppercase tracking-[0.18em] text-faint">Active case</p>
+          <h2 className="text-[20px] font-semibold tracking-tight text-ink">
+            {scenario.name} <span className="font-mono text-[13px] font-normal text-faint">/ {scenario.year}</span>
+          </h2>
+          <p className="mt-1 text-[12px] text-muted">{scenario.place}</p>
+        </div>
+        <span className="rounded-panel border border-line/25 bg-ground-deep px-2.5 py-1.5 font-mono text-[9px] uppercase tracking-wider text-muted">{scenario.type} · {scenario.affectedVillages} villages</span>
       </div>
 
-      {/* Flow */}
-      <div className="flex flex-col items-start gap-1 font-mono text-[12px] tracking-widest">
+      {/* Linked response workflow */}
+      <div>
+        <p className="mb-3 font-mono text-[9px] uppercase tracking-[0.18em] text-faint">Response chain <span className="text-line-strong">/</span> Select a stage to continue</p>
+        <div className="grid overflow-hidden rounded-panel border border-line/25 bg-panel sm:grid-cols-2 xl:grid-cols-4">
         {[
-          { label: "DAMAGE", view: "damage" as const, note: assessed ? `${scenario.damagedHa} ha · ${scenario.confidence}%` : "not run" },
-          { label: "FUND ALLOCATION", view: "relief" as const, note: fmtL(scenario.totalFund) },
-          { label: "DISTRIBUTION", view: "relief" as const, note: `${villages.length} villages · ${fmtL(disbursed)} disbursed` },
-          { label: "RESTORATION", view: "recovery" as const, note: `${overall}% overall · ${completed}/${villages.length} completed` },
+          { label: "Damage assessment", view: "damage" as const, note: assessed ? `${scenario.damagedHa} ha · ${scenario.confidence}% confidence` : "Satellite comparison ready", state: assessed ? "ASSESSED" : "READY" },
+          { label: "Fund allocation", view: "relief" as const, note: `${fmtL(scenario.totalFund)} approved`, state: "ALLOCATED" },
+          { label: "Village distribution", view: "relief" as const, note: `${fmtL(disbursed)} disbursed across ${villages.length}`, state: `${Math.round((disbursed / scenario.totalFund) * 100)}%` },
+          { label: "Recovery tracking", view: "recovery" as const, note: `${completed} of ${villages.length} villages completed`, state: `${overall}%` },
         ].map((s, i) => (
-          <div key={s.label} className="flex flex-col items-start">
-            {i > 0 && <span className="py-0.5 text-faint">↓</span>}
+          <div key={s.label} className={`relative min-w-0 ${i === 1 ? "border-t border-line/20 sm:border-t-0 sm:border-l" : ""} ${i === 2 ? "border-t border-line/20 sm:border-t xl:border-t-0 xl:border-l" : ""} ${i === 3 ? "border-t border-line/20 sm:border-l xl:border-t-0" : ""}`}>
             <button
               type="button"
               onClick={() => onView(s.view)}
-              className="press flex items-baseline gap-3 text-left transition-colors hover:text-signal"
+              className="press group flex min-h-[104px] w-full flex-col items-start justify-between gap-4 p-4 text-left transition-colors hover:bg-panel-raised/70 sm:p-5"
             >
-              <span className="text-signal">{s.label}</span>
-              <span className="font-mono text-[11px] normal-case tracking-normal text-faint">
-                {s.note}
+              <span className="flex w-full items-center justify-between gap-2">
+                <span className="font-mono text-[9px] tracking-[0.14em] text-faint">0{i + 1}</span>
+                <span className="rounded-panel border border-line/25 bg-ground-deep px-2 py-1 font-mono text-[8px] tracking-wider text-signal">{s.state}</span>
+              </span>
+              <span>
+                <span className="block text-[12px] font-medium text-ink group-hover:text-signal">{s.label}<span aria-hidden className="ml-2 text-faint">→</span></span>
+                <span className="mt-1 block text-[10px] leading-relaxed text-muted">{s.note}</span>
               </span>
             </button>
           </div>
         ))}
+        </div>
       </div>
 
       {/* Fund chain summary */}
@@ -100,4 +130,14 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Sep() {
   return <span className="hidden h-8 w-px bg-line/20 sm:block" />;
+}
+
+function Snapshot({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="min-w-0 px-4 py-4 sm:px-5">
+      <dt className="truncate font-mono text-[9px] uppercase tracking-[0.14em] text-faint">{label}</dt>
+      <dd className="mt-2 truncate font-mono text-[20px] leading-none tracking-tight text-ink sm:text-[22px]">{value}</dd>
+      <p className="mt-1.5 truncate text-[10px] text-muted">{note}</p>
+    </div>
+  );
 }

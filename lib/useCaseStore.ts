@@ -12,7 +12,7 @@ import { TILE_PROVIDERS, type TileProvider } from "@/lib/mapTiles";
 const STORAGE_KEY = "innovision:case:v1";
 
 export type Section = "overview" | "damage" | "relief" | "claims";
-export type Screen = "home" | "case";
+export type Screen = "home" | "case" | "campaigns";
 
 interface Snapshot {
   screen: Screen;
@@ -156,6 +156,11 @@ export function useCaseStore() {
 
   const openIndex = useCallback(() => setState((p) => ({ ...p, screen: "home" })), []);
 
+  const openCampaigns = useCallback(
+    () => setState((p) => ({ ...p, screen: "campaigns" })),
+    [],
+  );
+
   const setSection = useCallback(
     (section: Section) => setState((p) => ({ ...p, screen: "case", section })),
     [],
@@ -203,6 +208,7 @@ export function useCaseStore() {
     scenario,
     hydrated,
     openIndex,
+    openCampaigns,
     selectScenario,
     setSection,
     setSelectedId,

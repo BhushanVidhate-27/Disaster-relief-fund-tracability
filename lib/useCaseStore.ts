@@ -11,7 +11,7 @@ import { TILE_PROVIDERS, type TileProvider } from "@/lib/mapTiles";
 
 const STORAGE_KEY = "innovision:case:v1";
 
-export type Section = "overview" | "damage" | "relief";
+export type Section = "overview" | "damage" | "relief" | "claims";
 export type Screen = "home" | "case";
 
 interface Snapshot {
@@ -24,7 +24,7 @@ interface Snapshot {
   tileProvider: TileProvider;
 }
 
-const SECTIONS: Section[] = ["overview", "damage", "relief"];
+const SECTIONS: Section[] = ["overview", "damage", "relief", "claims"];
 
 const STATUSES: VillageStatus[] = ["PENDING", "ALLOCATED", "DISBURSED"];
 

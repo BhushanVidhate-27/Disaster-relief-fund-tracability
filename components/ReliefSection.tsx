@@ -9,6 +9,7 @@ import {
   type Village,
 } from "@/lib/data";
 import type { TileProvider } from "@/components/MapBasemap";
+import { ClaimIntake } from "@/components/ClaimIntake";
 
 const VillageMap = dynamic(
   () => import("@/components/VillageMap").then((m) => m.VillageMap),
@@ -69,11 +70,14 @@ export function ReliefSection({
 
       {/* Detail panel */}
       {village && (
-        <VillageDetail
-          key={village.id + village.status}
-          village={village}
-          onDisburse={() => onDisburse(village.id)}
-        />
+        <>
+          <VillageDetail
+            key={village.id + village.status}
+            village={village}
+            onDisburse={() => onDisburse(village.id)}
+          />
+          <ClaimIntake key={village.id} village={village} />
+        </>
       )}
 
       <Traceability

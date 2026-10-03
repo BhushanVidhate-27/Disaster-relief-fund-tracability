@@ -6,6 +6,7 @@ import { Overview } from "@/components/Overview";
 import { DamageSection } from "@/components/DamageSection";
 import { ReliefSection } from "@/components/ReliefSection";
 import { ManageClaimsSection } from "@/components/ManageClaimsSection";
+import { CampaignWorkspace } from "@/components/CampaignWorkspace";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV: { id: Section; label: string; number: string }[] = [
@@ -22,8 +23,12 @@ export default function App() {
     return <div className="min-h-screen bg-ground" />;
   }
 
+  if (s.screen === "campaigns") {
+    return <CampaignWorkspace onBack={s.openIndex} />;
+  }
+
   if (s.screen === "home") {
-    return <Landing onEnter={s.selectScenario} />;
+    return <Landing onEnter={s.selectScenario} onOpenCampaigns={s.openCampaigns} />;
   }
 
   return (

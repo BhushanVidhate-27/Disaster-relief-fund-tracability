@@ -9,7 +9,13 @@ function compact(n: number): string {
   return n.toLocaleString("en-IN");
 }
 
-export function Landing({ onEnter }: { onEnter: (id: string) => void }) {
+export function Landing({
+  onEnter,
+  onOpenCampaigns,
+}: {
+  onEnter: (id: string) => void;
+  onOpenCampaigns: () => void;
+}) {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="border-b border-line/25">
@@ -25,7 +31,16 @@ export function Landing({ onEnter }: { onEnter: (id: string) => void }) {
               INNOVISION
             </span>
           </div>
-          <ThemeToggle />
+          <nav aria-label="Home" className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onOpenCampaigns}
+              className="press rounded-panel border border-line/30 px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-muted hover:bg-panel-raised hover:text-ink"
+            >
+              Fund campaigns
+            </button>
+            <ThemeToggle />
+          </nav>
         </div>
       </header>
 

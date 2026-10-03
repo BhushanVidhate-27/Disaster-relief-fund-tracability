@@ -5,12 +5,14 @@ import { Landing } from "@/components/Landing";
 import { Overview } from "@/components/Overview";
 import { DamageSection } from "@/components/DamageSection";
 import { ReliefSection } from "@/components/ReliefSection";
+import { ManageClaimsSection } from "@/components/ManageClaimsSection";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV: { id: Section; label: string; number: string }[] = [
   { id: "overview", label: "Overview", number: "01" },
   { id: "damage", label: "Damage", number: "02" },
   { id: "relief", label: "Relief", number: "03" },
+  { id: "claims", label: "Manage claims", number: "04" },
 ];
 
 export default function App() {
@@ -107,6 +109,7 @@ export default function App() {
             onProviderChange={s.setTileProvider}
           />
         )}
+        {s.section === "claims" && <ManageClaimsSection />}
       </main>
     </div>
   );

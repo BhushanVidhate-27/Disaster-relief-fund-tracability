@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { scenarios, type ScenarioMeta } from "@/lib/data";
+import type { TileProvider } from "@/components/MapBasemap";
 
 const EventMapInner = dynamic(
   () => import("@/components/EventMapInner").then((m) => m.EventMapInner),
@@ -13,9 +14,13 @@ const EventMapInner = dynamic(
 export function EventSwitcher({
   selected,
   onSelect,
+  provider,
+  onProviderChange,
 }: {
   selected: ScenarioMeta;
   onSelect: (id: string) => void;
+  provider: TileProvider;
+  onProviderChange: (provider: TileProvider) => void;
 }) {
   return (
     <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-[minmax(0,1.85fr)_minmax(280px,1fr)]">
@@ -27,7 +32,12 @@ export function EventSwitcher({
           </div>
         </div>
         <div className="darkmap min-h-0 flex-1 overflow-hidden rounded-panel border border-line/25">
-          <EventMapInner selected={selected} onSelect={onSelect} />
+          <EventMapInner
+            selected={selected}
+            onSelect={onSelect}
+            provider={provider}
+            onProviderChange={onProviderChange}
+          />
         </div>
       </div>
 

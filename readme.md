@@ -2,7 +2,7 @@
 
 A no-backend prototype built on three **real** disaster events. It covers how
 satellite and citizen evidence combine into a verified damage case whose relief
-and recovery can be traced.
+can be traced.
 
 ## Screens
 
@@ -10,9 +10,14 @@ and recovery can be traced.
 | --- | --- | --- |
 | 01 | Case index | The three events with their sourced death / affected / displaced figures |
 | 02 | Overview | Recorded impact with source links, event map, operational stats |
-| 03 | Damage | Before/after satellite view, grid change detection, detected zones |
-| 04 | Relief | Approved → disbursed → utilized, village detail, utilization mismatch |
-| 05 | Recovery | Village-level restoration bars and overall recovery |
+| 03 | Damage | Affected area (detected zones) alongside a second area you mark by hand |
+| 04 | Relief | Approved → disbursed → utilized, village detail, utilization mismatch, fund trail |
+
+The workflow ends at Relief. A separate Recovery screen was cut entirely —
+along with the restoration concept behind it (progress bars, deadlines, the
+30-day simulation, and per-village completion state). What the money did is
+tracked instead: disbursed against reported utilization, per village and in
+total.
 
 
 ## Data provenance
@@ -41,7 +46,26 @@ imagery captured on the event dates — the dates are labels, not acquisitions.
 
 Tile URLs all live in `lib/mapTiles.ts`; every map shares that one decision.
 
-Two providers, split by zoom band rather than switched wholesale:
+### Switching the tile source
+
+The header carries a `TILES` switch with two options:
+
+| Option | Stack | Imagery | Key | Deep zoom |
+| --- | --- | --- | --- | --- |
+| `KEYED` | Esri/OSM below z18, MapTiler above | best | yes | to z22 |
+| `FREE` | Esri `World_Imagery` + OSM only | good | no | capped at z18 |
+
+`FREE` keeps the app off the metered tier entirely — no quota, nothing to
+exhaust. The cost is depth: because Esri has no imagery past z18, the map
+caps itself at 18 instead of over-zooming into blank tiles. The choice is
+saved in `localStorage`, so it survives a reload. With no MapTiler key
+configured the `KEYED` option is disabled and marked as such rather than
+silently painting empty tiles.
+
+### How the two are split by zoom
+
+With `KEYED` selected, the split is by zoom band rather than switched
+wholesale:
 
 | Zoom | Provider | Satellite | Streets | Max zoom |
 | --- | --- | --- | --- | --- |
@@ -96,8 +120,38 @@ black/white, no gradients or glassmorphism, monospace numerals for every stat,
 ## Walkthrough (60–90s)
 
 Pick an event on the index → read the sourced impact figures and their source
-links on Overview → run change detection on Damage → disburse funds, hit the
-utilization mismatch, then advance 30 days to close out restoration on Recovery.
+links on Overview → on Damage, assess the detected affected area, then click
+four points to mark an area of your own and assess what share of it shows
+damage → disburse funds, hit the utilization mismatch, and read the fund trail
+showing what each disbursement actually accounted for.
+
+## Marking a second area
+
+The Damage screen runs two assessments side by side.
+
+**Left — affected area.** The zones change detection found for the event, drawn
+as polygons and framed automatically. `ASSESS AFFECTED AREA` grid-samples the
+visible extent against them.
+
+**Right — marked area.** Click four points and they close into a polygon. Two
+points draw a dashed line, three or more fill as an area, and the view re-fits
+as the shape grows. `ASSESS MARKED AREA` then reports:
+
+- **Area marked** and **perimeter**, both geodesic
+- **Shows damage** — the share of *your* polygon that intersects a detected
+  zone
+- **Damage in area** — that share expressed back in hectares
+- Which damage types fall inside it
+
+The denominator is the polygon you drew, not the viewport, which is what makes
+the percentage answer "is the area I marked actually damaged?" `UNDO` steps back
+one point and `MARK ANOTHER` clears it; editing the shape discards the previous
+reading so the report can never describe a polygon that has since changed.
+
+Area uses the spherical-excess formula rather than a flat-degree shoelace: at
+this scale a degree of longitude is ~1% shorter than a degree of latitude, so
+the planar form misreports area by a latitude-dependent factor — about 8% at
+Kerala's 10°N and 35% at Amphan's 22°N.
 
 ## What was cut
 
@@ -107,6 +161,14 @@ its place, and a few claims the code could not support. Both went:
 - Three copies of the tagline "From damage to recovery" / "Every rupee is
   linked to a village" — one was the page hero, one the page footer, one the
   Recovery screen.
+- The whole recovery stage: the Recovery screen, restoration progress bars, per
+  village deadlines, the "advance 30 days" simulation, and the completion state
+  they fed. Funds are tracked to the point of utilization reporting instead.
+- Damage's `BEFORE` / `AFTER` panel pair. It looked like a temporal comparison
+  but both maps render live current imagery with the event dates printed as
+  labels, so there was nothing pre-event to compare against. Replacing it with
+  the affected area and a hand-marked area makes two claims the code can
+  actually support.
 - The landing page's marketing aside (`Response workflow` / `One traceable case`
   / `TRACEABLE`) listed three invented steps that duplicated the real nav, above
   a pair of speculative fund figures shown before you had picked an event. The
@@ -126,10 +188,14 @@ its place, and a few claims the code could not support. Both went:
 
 ## Saved progress
 
-Case state (selected event, section, per-village disbursement/utilisation,
-restoration state, day counter) is written to `localStorage` under
+Case state (selected event, section, tile provider, per-village
+disbursement/utilisation) is written to `localStorage` under
 `innovision:case:v1`, so a reload drops you back where you were instead of
 replaying the flow.
+
+Saved villages are rebuilt from the fields the app still owns, so a state
+written before the restoration concept was removed loads with its disbursement
+and utilization intact rather than resetting the case.
 
 Stored state is validated on load against the shipped dataset: if the scenario is
 unknown, or the stored village ids no longer match the scenario's, the state is

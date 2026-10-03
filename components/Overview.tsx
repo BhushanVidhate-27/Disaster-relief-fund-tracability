@@ -7,24 +7,28 @@ import {
   type Village,
 } from "@/lib/data";
 import { EventSwitcher } from "@/components/EventSwitcher";
+import type { TileProvider } from "@/components/MapBasemap";
 
 export function Overview({
   scenario,
   villages,
   assessed,
   onSelectScenario,
+  provider,
+  onProviderChange,
 }: {
   scenario: ScenarioMeta;
   villages: Village[];
   assessed: boolean;
   onSelectScenario: (id: string) => void;
+  provider: TileProvider;
+  onProviderChange: (provider: TileProvider) => void;
 }) {
-  const disbursed = villages.reduce((s, v) => s + v.disbursed, 0);
-  const overall = Math.round(
-    villages.reduce((s, v) => s + (v.status === "COMPLETED" ? 100 : v.progress), 0) /
-      villages.length
-  );
-  const completed = villages.filter((v) => v.status === "COMPLETED").length;
+const disbursed = villages.reduce((s, v) => s + v.disbursed, 0);
+  const utilized = villages.reduce((s, v) => s + v.utilized, 0);
+  const utilizationPct =
+    disbursed > 0 ? Math.round((utilized / disbursed) * 100) : 0;
+  const flagged = villages.filter((v) => v.mismatch).length;
 
   const f = scenario.facts;
   const impact = [
@@ -65,10 +69,19 @@ export function Overview({
         <Snapshot label="Villages mapped" value={String(villages.length).padStart(2, "0")} note={scenario.district} />
         <Snapshot label="Approved fund" value={fmtL(scenario.totalFund)} note="modelled" />
         <Snapshot label="Disbursed" value={fmtL(disbursed)} note={`${villages.length} villages`} />
-        <Snapshot label="Recovery" value={`${overall}%`} note={`${completed} completed`} />
+        <Snapshot
+          label="Utilization"
+          value={`${utilizationPct}%`}
+          note={flagged > 0 ? `${flagged} flagged` : "of disbursed"}
+        />
       </dl>
 
-      <EventSwitcher selected={scenario} onSelect={onSelectScenario} />
+      <EventSwitcher
+        selected={scenario}
+        onSelect={onSelectScenario}
+        provider={provider}
+        onProviderChange={onProviderChange}
+      />
 
       <div className="rounded-panel border border-line/25 bg-panel p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
@@ -113,7 +126,7 @@ export function Overview({
       </div>
 
       <p className="font-mono text-[10px] leading-relaxed text-faint">
-        Fund amounts, recovery percentages and AI confidence above are modelled.
+        Fund amounts, utilization percentages and AI confidence above are modelled.
         Recorded impact figures are sourced — see the links above.
       </p>
     </div>

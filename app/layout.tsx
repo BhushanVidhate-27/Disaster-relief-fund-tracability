@@ -12,7 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "INNOVISION — Disaster Relief Intelligence",
   description:
-    "Village-level relief distribution and restoration tracking across three real disaster events.",
+    "Village-level relief distribution and fund-utilization tracking across three real disaster events.",
 };
 
 // Restore the user's saved theme before first paint to avoid a flash.

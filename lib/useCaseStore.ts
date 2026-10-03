@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_SCENARIO_ID, getScenario, type Village } from "@/lib/data";
+import {
+  DEFAULT_SCENARIO_ID,
+  getScenario,
+  type Village,
+  type VillageStatus,
+} from "@/lib/data";
+import { TILE_PROVIDERS, type TileProvider } from "@/lib/mapTiles";
 
 const STORAGE_KEY = "innovision:case:v1";
 
-export type Section = "overview" | "damage" | "relief" | "recovery";
+export type Section = "overview" | "damage" | "relief";
 export type Screen = "home" | "case";
 
 interface Snapshot {
@@ -15,10 +21,47 @@ interface Snapshot {
   villages: Village[];
   selectedId: string | null;
   assessed: boolean;
-  day: number;
+  tileProvider: TileProvider;
 }
 
-const SECTIONS: Section[] = ["overview", "damage", "relief", "recovery"];
+const SECTIONS: Section[] = ["overview", "damage", "relief"];
+
+const STATUSES: VillageStatus[] = ["PENDING", "ALLOCATED", "DISBURSED"];
+
+/**
+ * States saved before the restoration concept was removed still carry
+ * `progress` / `deadlineDays` / `completedOn` and the now-deleted DUE and
+ * COMPLETED statuses. Passing those through would render `undefined` in the
+ * status column, so a stored village is rebuilt from the fields the app still
+ * owns. A COMPLETED village becomes DISBURSED, which is where it sat in the
+ * fund trail before it was closed out.
+ */
+function sanitizeVillage(v: unknown): Village | null {
+  if (!v || typeof v !== "object") return null;
+  const c = v as Partial<Village>;
+  if (typeof c.id !== "string" || typeof c.name !== "string") return null;
+
+  const num = (x: unknown, fallback = 0) =>
+    typeof x === "number" && Number.isFinite(x) ? x : fallback;
+
+  return {
+    id: c.id,
+    name: c.name,
+    lat: num(c.lat),
+    lng: num(c.lng),
+    families: num(c.families),
+    severity: c.severity ?? "Moderate",
+    approved: num(c.approved),
+    disbursed: num(c.disbursed),
+    utilized: num(c.utilized),
+    status: STATUSES.includes(c.status as VillageStatus)
+      ? (c.status as VillageStatus)
+      : "DISBURSED",
+    mismatch: c.mismatch,
+    population2011: c.population2011,
+    coordsVerified: Boolean(c.coordsVerified),
+  };
+}
 
 function defaults(): Snapshot {
   const s = getScenario(DEFAULT_SCENARIO_ID);
@@ -29,7 +72,7 @@ function defaults(): Snapshot {
     villages: s.villages,
     selectedId: s.villages[0]?.id ?? null,
     assessed: false,
-    day: 0,
+    tileProvider: "maptiler",
   };
 }
 
@@ -50,31 +93,34 @@ function isUsable(p: unknown): p is Snapshot {
   return shipped === stored;
 }
 
+/**
+ * A missing or unrecognised tile provider falls back to the default instead of
+ * discarding the case — the map source is a display preference and is not worth
+ * throwing away someone's in-progress relief state over.
+ */
+function normalize(p: Snapshot): Snapshot {
+  const villages = p.villages
+    .map(sanitizeVillage)
+    .filter((v): v is Village => v !== null);
+  return {
+    ...p,
+    villages,
+    tileProvider: TILE_PROVIDERS.includes(p.tileProvider)
+      ? p.tileProvider
+      : "maptiler",
+  };
+}
+
 function read(): Snapshot {
   if (typeof window === "undefined") return defaults();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults();
     const parsed: unknown = JSON.parse(raw);
-    return isUsable(parsed) ? parsed : defaults();
+    return isUsable(parsed) ? normalize(parsed) : defaults();
   } catch {
     return defaults();
   }
-}
-
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-/** "28 Aug 2018" + n days → "27 Sep 2018" */
-function addDays(date: string, n: number): string {
-  const m = /^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/.exec(date.trim());
-  if (!m) return `Day ${n}`;
-  const mi = MONTHS.indexOf(m[2][0].toUpperCase() + m[2].slice(1).toLowerCase());
-  if (mi < 0) return `Day ${n}`;
-  const d = new Date(Date.UTC(+m[3], mi, +m[1] + n));
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
 export function useCaseStore() {
@@ -105,7 +151,6 @@ export function useCaseStore() {
       villages: s.villages,
       selectedId: s.villages[0]?.id ?? null,
       assessed: false,
-      day: 0,
     }));
   }, []);
 
@@ -118,6 +163,11 @@ export function useCaseStore() {
 
   const setSelectedId = useCallback(
     (selectedId: string) => setState((p) => ({ ...p, selectedId })),
+    [],
+  );
+
+  const setTileProvider = useCallback(
+    (tileProvider: TileProvider) => setState((p) => ({ ...p, tileProvider })),
     [],
   );
 
@@ -136,32 +186,6 @@ export function useCaseStore() {
       ),
     }));
   }, []);
-
-  const advanceDay = useCallback(() => {
-    setState((p) => ({ ...p, day: p.day >= 30 ? p.day : 30 }));
-  }, []);
-
-  const complete = useCallback(
-    (id: string) => {
-      setState((p) => {
-        const scenario = getScenario(p.scenarioId);
-        return {
-          ...p,
-          villages: p.villages.map((v) =>
-            v.id === id && v.status === "DISBURSED"
-              ? {
-                  ...v,
-                  status: "COMPLETED" as const,
-                  progress: 100,
-                  completedOn: `Day ${p.day} · ${addDays(scenario.meta.postDate, p.day)}`,
-                }
-              : v,
-          ),
-        };
-      });
-    },
-    [],
-  );
 
   const reset = useCallback(() => {
     try {
@@ -183,9 +207,8 @@ export function useCaseStore() {
     setSection,
     setSelectedId,
     setAssessed,
+    setTileProvider,
     disburse,
-    advanceDay,
-    complete,
     reset,
   };
 }

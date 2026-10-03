@@ -5,14 +5,12 @@ import { Landing } from "@/components/Landing";
 import { Overview } from "@/components/Overview";
 import { DamageSection } from "@/components/DamageSection";
 import { ReliefSection } from "@/components/ReliefSection";
-import { Recovery } from "@/components/Recovery";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV: { id: Section; label: string; number: string }[] = [
   { id: "overview", label: "Overview", number: "01" },
   { id: "damage", label: "Damage", number: "02" },
   { id: "relief", label: "Relief", number: "03" },
-  { id: "recovery", label: "Recovery", number: "04" },
 ];
 
 export default function App() {
@@ -67,7 +65,7 @@ export default function App() {
           <button
             type="button"
             onClick={s.reset}
-            title="Clear saved progress and reload the sample data"
+            title="Clear the saved case state and reload the sample data"
             className="press ml-1 shrink-0 rounded-panel border border-transparent px-3 py-2 font-mono text-[10px] uppercase tracking-wider text-faint transition-colors hover:border-line/25 hover:text-ink"
           >
             Reset
@@ -84,6 +82,8 @@ export default function App() {
             villages={s.villages}
             assessed={s.assessed}
             onSelectScenario={s.selectScenario}
+            provider={s.tileProvider}
+            onProviderChange={s.setTileProvider}
           />
         )}
         {s.section === "damage" && (
@@ -92,6 +92,8 @@ export default function App() {
             assessed={s.assessed}
             onAssess={() => s.setAssessed(true)}
             onNext={() => s.setSection("relief")}
+            provider={s.tileProvider}
+            onProviderChange={s.setTileProvider}
           />
         )}
         {s.section === "relief" && (
@@ -99,15 +101,12 @@ export default function App() {
             scenario={s.scenario.meta}
             villages={s.villages}
             selectedId={s.selectedId}
-            day={s.day}
             onSelect={s.setSelectedId}
             onDisburse={s.disburse}
-            onAdvanceDay={s.advanceDay}
-            onComplete={s.complete}
-            onViewRecovery={() => s.setSection("recovery")}
+            provider={s.tileProvider}
+            onProviderChange={s.setTileProvider}
           />
         )}
-        {s.section === "recovery" && <Recovery villages={s.villages} />}
       </main>
     </div>
   );

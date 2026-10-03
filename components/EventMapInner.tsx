@@ -4,16 +4,26 @@ import { useEffect, useRef, useState } from "react";
 import { MapContainer, CircleMarker, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { scenarios, type ScenarioMeta } from "@/lib/data";
-import { BasemapToggle, FixMapSize, MapTiles, type BasemapMode } from "@/components/MapBasemap";
-import { basemapMaxZoom } from "@/lib/mapTiles";
+import {
+  FixMapSize,
+  MapControls,
+  MapTiles,
+  type BasemapMode,
+  type TileProvider,
+} from "@/components/MapBasemap";
+import { basemapMaxZoom, tileGradeClass } from "@/lib/mapTiles";
 
 /** India-wide map: one marker per disaster event. */
 export function EventMapInner({
   selected,
   onSelect,
+  provider,
+  onProviderChange,
 }: {
   selected: ScenarioMeta;
   onSelect: (id: string) => void;
+  provider: TileProvider;
+  onProviderChange: (provider: TileProvider) => void;
 }) {
   const [basemap, setBasemap] = useState<BasemapMode>("satellite");
 
@@ -24,11 +34,11 @@ export function EventMapInner({
         center={[20.5, 80.5]}
         zoom={5}
         scrollWheelZoom
-        maxZoom={basemapMaxZoom(basemap)}
-        className="h-full w-full"
+        maxZoom={basemapMaxZoom(basemap, provider)}
+        className={`h-full w-full ${tileGradeClass(provider)}`}
         style={{ height: "100%", width: "100%", background: "var(--map-bg)" }}
       >
-        <MapTiles mode={basemap} />
+        <MapTiles mode={basemap} provider={provider} />
         <FixMapSize />
         <FlyTo lat={selected.lat} lng={selected.lng} zoom={selected.zoom} skipFirst />
         {scenarios.map((s) => {
@@ -55,7 +65,12 @@ export function EventMapInner({
           );
         })}
       </MapContainer>
-      <BasemapToggle mode={basemap} onChange={setBasemap} />
+      <MapControls
+        mode={basemap}
+        onChange={setBasemap}
+        provider={provider}
+        onProviderChange={onProviderChange}
+      />
     </div>
   );
 }

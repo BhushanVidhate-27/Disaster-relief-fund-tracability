@@ -105,11 +105,6 @@ html[data-theme="light"] {
   .darkmap .leaflet-container {
     background: var(--map-bg);
   }
-
-  /* Filter tiles only — never the Leaflet wrapper (breaks one of two maps). */
-  .sat-pre .leaflet-tile-pane {
-    filter: grayscale(0.4) contrast(0.95);
-  }
 }
 
 @layer utilities {
@@ -160,4 +155,43 @@ html[data-theme="light"] {
     opacity: 1;
     transform: none;
   }
+}
+/* ------------------------------------------------------------------
+   Tile grading — deliberately OUTSIDE @layer.
+
+   Inside a Tailwind layer the single-class `.tiles-key` / `.tiles-free`
+   rules get dropped as unused-utility candidates and never reach the
+   bundle, which silently disables the whole provider grade. Unlayered
+   CSS is emitted verbatim and also wins over layered rules on order,
+   so no specificity juggling is needed.
+
+   The grade is what makes the KEY/FREE switch legible: at z0-z18 both
+   providers serve the same Esri/OSM tiles, so the choice is otherwise
+   invisible at the zoom levels this app uses. Grading runs through a
+   custom property so the provider grade and the before/after
+   desaturation compose instead of overwriting each other.
+
+   Only the tile pane is filtered — filtering the map wrapper would
+   re-tint the overlay controls and the attribution bar.
+   ------------------------------------------------------------------ */
+.leaflet-container .leaflet-tile-pane {
+  filter: var(--tile-filter, none);
+  transition: filter 220ms ease-out;
+}
+
+.tiles-key {
+  --tile-filter: saturate(1.2) contrast(1.09);
+}
+
+.tiles-free {
+  --tile-filter: saturate(0.68) contrast(0.93) brightness(1.05);
+}
+
+/* Pre-event panels stay desaturated whichever provider is active. */
+.sat-pre.tiles-key {
+  --tile-filter: grayscale(0.4) contrast(0.95) saturate(1.12);
+}
+
+.sat-pre.tiles-free {
+  --tile-filter: grayscale(0.4) contrast(0.95) saturate(0.66);
 }

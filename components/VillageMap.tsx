@@ -4,15 +4,19 @@ import { useMemo, useState } from "react";
 import { MapContainer, CircleMarker, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { statusLabel, type Village } from "@/lib/data";
-import { basemapMaxZoom, providerLabel } from "@/lib/mapTiles";
-import { BasemapToggle, FixMapSize, MapTiles, type BasemapMode } from "@/components/MapBasemap";
+import { basemapMaxZoom, providerLabel, tileGradeClass } from "@/lib/mapTiles";
+import {
+  FixMapSize,
+  MapControls,
+  MapTiles,
+  type BasemapMode,
+  type TileProvider,
+} from "@/components/MapBasemap";
 
 const statusColor: Record<string, string> = {
   PENDING: "#c04a3e",
   ALLOCATED: "#f0b25c",
   DISBURSED: "#d69a42",
-  DUE: "#d69a42",
-  COMPLETED: "#5f9e6e",
 };
 
 /** District map with one marker per village. Click to select. */
@@ -20,10 +24,14 @@ export function VillageMap({
   villages,
   selectedId,
   onSelect,
+  provider,
+  onProviderChange,
 }: {
   villages: Village[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  provider: TileProvider;
+  onProviderChange: (provider: TileProvider) => void;
 }) {
   const [basemap, setBasemap] = useState<BasemapMode>("satellite");
   const center = useMemo((): [number, number] => {
@@ -42,10 +50,11 @@ export function VillageMap({
         center={center}
         zoom={10}
         scrollWheelZoom={false}
-        maxZoom={basemapMaxZoom(basemap)}
+        maxZoom={basemapMaxZoom(basemap, provider)}
+        className={tileGradeClass(provider)}
         style={{ height: "100%", width: "100%", background: "var(--map-bg)" }}
       >
-        <MapTiles mode={basemap} />
+        <MapTiles mode={basemap} provider={provider} />
         <FixMapSize />
         {villages.map((v) => {
           const active = v.id === selectedId;
@@ -70,10 +79,15 @@ export function VillageMap({
           );
         })}
       </MapContainer>
-      <BasemapToggle mode={basemap} onChange={setBasemap} />
+      <MapControls
+        mode={basemap}
+        onChange={setBasemap}
+        provider={provider}
+        onProviderChange={onProviderChange}
+      />
       <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-center justify-between border-t border-line/25 bg-ground-deep/90 px-3 py-1.5 font-mono text-[10px] text-faint">
         <span>
-          {providerLabel(basemap)}
+          {providerLabel(basemap, provider)}
         </span>
         <span>Click a village</span>
       </div>

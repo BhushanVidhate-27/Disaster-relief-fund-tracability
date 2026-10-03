@@ -30,6 +30,21 @@ export interface LatLngBoundsLike {
   getEast(): number;
 }
 
+/**
+ * Result of assessing a user-marked polygon: how much of the area they drew
+ * actually intersects detected damage.
+ */
+export interface MarkedAreaAssessment extends DamageComputation {
+  /** Area of the drawn polygon, in hectares. */
+  polygonAreaHa: number;
+  /** Perimeter of the drawn polygon, in km. */
+  perimeterKm: number;
+  /** Grid points that landed inside the polygon (the assessment denominator). */
+  pointsInside: number;
+  /** Of those, how many also fell inside a detected damage zone. */
+  damagedInside: number;
+}
+
 export interface DamageComputation {
   damagePercentage: number;
   totalSamplePoints: number;
@@ -218,6 +233,165 @@ export function getDamageZones(scenario: ScenarioMeta): DamageZone[] {
       color: ZONE_COLORS.vegetation,
     },
   ];
+}
+
+/** Mean Earth radius, metres. */
+const EARTH_R = 6371008.8;
+const RAD = Math.PI / 180;
+
+/**
+ * Geodesic area of a closed ring, in hectares.
+ *
+ * Spherical-excess form rather than a flat-degree shoelace: at the scale of a
+ * few kilometres a degree of longitude is ~1% shorter than a degree of latitude,
+ * so treating the ring as planar misreports area by a latitude-dependent factor
+ * (off by ~8% at Kerala's 10°N, ~35% at Amphan's 22°N). Hectares, because that
+ * is what the recorded `damagedHa` figures on the Overview use.
+ */
+export function polygonAreaHa(ring: [number, number][]): number {
+  if (ring.length < 3) return 0;
+  let sum = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [lat1, lng1] = ring[i];
+    const [lat2, lng2] = ring[(i + 1) % ring.length];
+    sum +=
+      (lng2 - lng1) * RAD * (2 + Math.sin(lat1 * RAD) + Math.sin(lat2 * RAD));
+  }
+  return Math.abs((sum * EARTH_R * EARTH_R) / 2) / 10_000;
+}
+
+/** Haversine perimeter of a ring, in km. */
+export function polygonPerimeterKm(ring: [number, number][]): number {
+  if (ring.length < 2) return 0;
+  let metres = 0;
+  for (let i = 0; i < ring.length; i++) {
+    const [lat1, lng1] = ring[i];
+    const [lat2, lng2] = ring[(i + 1) % ring.length];
+    const dLat = (lat2 - lat1) * RAD;
+    const dLng = (lng2 - lng1) * RAD;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * RAD) * Math.cos(lat2 * RAD) * Math.sin(dLng / 2) ** 2;
+    metres += 2 * EARTH_R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+  return metres / 1000;
+}
+
+export interface RingBounds {
+  south: number;
+  north: number;
+  west: number;
+  east: number;
+}
+
+export function ringBounds(ring: [number, number][]): RingBounds | null {
+  if (!ring.length) return null;
+  let south = Infinity;
+  let north = -Infinity;
+  let west = Infinity;
+  let east = -Infinity;
+  for (const [lat, lng] of ring) {
+    if (lat < south) south = lat;
+    if (lat > north) north = lat;
+    if (lng < west) west = lng;
+    if (lng > east) east = lng;
+  }
+  return { south, north, west, east };
+}
+
+/**
+ * Assess a user-marked ring against the detected damage zones.
+ *
+ * A grid is laid over the ring's bounding box, then filtered twice: points
+ * outside the drawn polygon are discarded so the denominator is the area the
+ * user actually marked, and only the survivors are tested against the damage
+ * zones. That makes `damagePercentage` answer "how much of the area I drew
+ * shows damage", which is the question a marked area is for — unlike
+ * computeDamageFromGrid, whose denominator is the whole viewport.
+ */
+export function assessMarkedArea(
+  ring: [number, number][],
+  zones: DamageZone[],
+  gridSize: number = 90,
+): MarkedAreaAssessment {
+  const box = ringBounds(ring);
+  const empty = {
+    polygonAreaHa: polygonAreaHa(ring),
+    perimeterKm: polygonPerimeterKm(ring),
+    pointsInside: 0,
+    damagedInside: 0,
+  };
+
+  if (!box || ring.length < 3) {
+    return {
+      damagePercentage: 0,
+      totalSamplePoints: 0,
+      damagedPoints: 0,
+      damageByType: EMPTY_BY_TYPE(),
+      ...empty,
+    };
+  }
+
+  let sampled = 0;
+  let pointsInside = 0;
+  let damagedInside = 0;
+  const damageByType = EMPTY_BY_TYPE();
+  const typeConfs: Record<DamageZoneType, number[]> = {
+    flood: [],
+    vegetation: [],
+    structural: [],
+    erosion: [],
+    debris: [],
+  };
+
+  const denom = Math.max(gridSize - 1, 1);
+
+  for (let i = 0; i < gridSize; i++) {
+    const lat = box.south + ((box.north - box.south) * i) / denom;
+    for (let j = 0; j < gridSize; j++) {
+      const lng = box.west + ((box.east - box.west) * j) / denom;
+      sampled++;
+      if (!isPointInPolygon(lat, lng, ring)) continue;
+
+      pointsInside++;
+      for (const zone of zones) {
+        if (isPointInPolygon(lat, lng, zone.coordinates)) {
+          damagedInside++;
+          damageByType[zone.type].points += 1;
+          typeConfs[zone.type].push(zone.confidence);
+          break;
+        }
+      }
+    }
+  }
+
+  (Object.keys(damageByType) as DamageZoneType[]).forEach((t) => {
+    const hits = zones.filter((z) => z.type === t);
+    damageByType[t].areaHa =
+      damageByType[t].points > 0
+        ? hits.reduce((s, z) => s + z.areaHa, 0)
+        : 0;
+    damageByType[t].confidence =
+      typeConfs[t].length > 0
+        ? Math.round(
+            typeConfs[t].reduce((a, b) => a + b, 0) / typeConfs[t].length,
+          )
+        : 0;
+  });
+
+  return {
+    damagePercentage:
+      pointsInside > 0
+        ? Math.round((damagedInside / pointsInside) * 100 * 100) / 100
+        : 0,
+    totalSamplePoints: pointsInside,
+    damagedPoints: damagedInside,
+    damageByType,
+    polygonAreaHa: empty.polygonAreaHa,
+    perimeterKm: empty.perimeterKm,
+    pointsInside,
+    damagedInside,
+  };
 }
 
 /** Ray casting. Point and ring are geographic [lat, lng]. */

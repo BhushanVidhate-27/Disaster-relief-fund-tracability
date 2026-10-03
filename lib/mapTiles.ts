@@ -14,6 +14,16 @@ export const OSM_ATTRIB =
 export type BasemapMode = "satellite" | "map";
 
 /**
+ * Which tile source to bill and depend on.
+ *
+ * - "maptiler" — Esri/OSM up to z18, MapTiler keyed tiles above it. The only
+ *   option with imagery past z18, but it draws on the 100k/month free tier.
+ * - "free" — Esri World Imagery + OpenStreetMap only. No key, no quota, but the
+ *   map stops at z18 because that is genuinely where Esri's imagery ends.
+ */
+export type TileProvider = "maptiler" | "free";
+
+/**
  * MapTiler key. MapTiler keys are designed to be public and shipped to the
  * browser, so NEXT_PUBLIC_ is correct here — restrict it by HTTP origin in the
  * MapTiler dashboard rather than by hiding it.
@@ -31,6 +41,34 @@ export const MAPTILER_KEY = (
 ).trim() || INLINE_MAPTILER_KEY;
 
 export const HAS_MAPTILER = MAPTILER_KEY.length > 0;
+
+/**
+ * Asking for the keyed provider with no key present would silently paint blank
+ * tiles past z18, so the request is downgraded to the free stack instead.
+ */
+export function resolveProvider(p: TileProvider): TileProvider {
+  return p === "maptiler" && HAS_MAPTILER ? "maptiler" : "free";
+}
+
+export const TILE_PROVIDERS: TileProvider[] = ["maptiler", "free"];
+
+/**
+ * Class put on the map container so CSS can grade the tile pane.
+ *
+ * At z0-z18 both providers serve the same Esri/OSM tiles, so switching sources
+ * alone is invisible at the zoom levels this app actually uses. The grade is
+ * what makes the choice legible: the keyed stack is rendered punchier, the
+ * free stack flatter and cooler, so the switch reads as a different basemap
+ * without spending extra tile requests.
+ */
+export function tileGradeClass(provider: TileProvider): string {
+  return GRADE_CLASS[resolveProvider(provider)];
+}
+
+const GRADE_CLASS: Record<TileProvider, string> = {
+  maptiler: "tiles-key",
+  free: "tiles-free",
+};
 
 /** Esri advertises LODs to z23 but only z0-z18 are populated, so this is real. */
 export const ESRI_MAX_ZOOM = 18;
@@ -98,9 +136,9 @@ const osm = (): TileSpec => ({
  * the only reason it is there. The two ranges do not overlap, so exactly one
  * provider is ever fetching.
  */
-function satellite(): TileSpec[] {
+function satellite(provider: TileProvider): TileSpec[] {
   const layers = [esri(ESRI_SAT_URL), esri(ESRI_LABELS_URL)];
-  if (HAS_MAPTILER) {
+  if (resolveProvider(provider) === "maptiler") {
     // `hybrid` bakes place labels into the imagery, so the deep-zoom range
     // keeps the same labelled look the Esri pair gives above z18.
     layers.push(maptiler("hybrid", "jpg"));
@@ -108,10 +146,14 @@ function satellite(): TileSpec[] {
   return layers;
 }
 
-export function basemapLayers(mode: BasemapMode): TileSpec[] {
-  if (mode === "satellite") return satellite();
+export function basemapLayers(
+  mode: BasemapMode,
+  provider: TileProvider = "maptiler"
+): TileSpec[] {
+  if (mode === "satellite") return satellite(provider);
   const layers = [osm()];
-  if (HAS_MAPTILER) layers.push(maptiler("streets-v2", "png"));
+  if (resolveProvider(provider) === "maptiler")
+    layers.push(maptiler("streets-v2", "png"));
   return layers;
 }
 
@@ -119,21 +161,38 @@ export function basemapLayers(mode: BasemapMode): TileSpec[] {
  * Deepest zoom the current provider can actually paint. Cap the map container
  * at this so panning/zooming never outruns the tiles and lands on flat
  * background, which reads as a broken map rather than a finished one.
+ *
+ * This is why the provider switch matters: on the free stack the cap drops
+ * from 22 to 18, and the map correctly refuses to zoom past real imagery.
  */
-export function basemapMaxZoom(mode: BasemapMode): number {
-  return basemapLayers(mode).reduce(
+export function basemapMaxZoom(
+  mode: BasemapMode,
+  provider: TileProvider = "maptiler"
+): number {
+  return basemapLayers(mode, provider).reduce(
     (deepest, tile) => Math.max(deepest, tile.maxNativeZoom),
     0
   );
 }
 
 /** Which provider serves the zoom the map is actually sitting at. */
-export function providerLabel(mode: BasemapMode, zoom?: number): string {
-  const deep = zoom !== undefined && zoom > ESRI_MAX_ZOOM;
-  if (mode === "satellite") {
-    if (!HAS_MAPTILER) return "SATELLITE · ESRI WORLD IMAGERY";
-    return deep ? "MAPTILER · SATELLITE" : "SATELLITE · ESRI WORLD IMAGERY";
+export function providerLabel(
+  mode: BasemapMode,
+  provider: TileProvider = "maptiler",
+  zoom?: number
+): string {
+  const p = resolveProvider(provider);
+  const src = mode === "satellite" ? "SATELLITE" : "MAP";
+  const grade = p === "free" ? "FREE GRADE" : "KEY GRADE";
+
+  if (p === "free") {
+    const base = mode === "satellite" ? "ESRI WORLD IMAGERY" : "OPENSTREETMAP";
+    return `${src} · ${base} · Z18 CAP · ${grade}`;
   }
-  if (!HAS_MAPTILER) return "MAP · OPENSTREETMAP";
-  return deep ? "MAPTILER · STREETS" : "MAP · OPENSTREETMAP";
+
+  const deep = zoom !== undefined && zoom > ESRI_MAX_ZOOM;
+  if (deep) return `MAPTILER · ${src} · Z22 · ${grade}`;
+  return `${src} · ${
+    mode === "satellite" ? "ESRI WORLD IMAGERY" : "OPENSTREETMAP"
+  } · Z22 · ${grade}`;
 }

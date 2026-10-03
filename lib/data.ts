@@ -6,16 +6,11 @@
    - coordinates, dates    verified against cited sources
    - families, approved,
      disbursed, utilized,
-     progress, severity,
-     confidence, totalFund MODELLED — no public record exists
+     severity, confidence,
+     totalFund            MODELLED — no public record exists
    ============================================================ */
 
-export type VillageStatus =
-  | "PENDING"
-  | "ALLOCATED"
-  | "DISBURSED"
-  | "DUE"
-  | "COMPLETED";
+export type VillageStatus = "PENDING" | "ALLOCATED" | "DISBURSED";
 
 export interface SourceRef {
   label: string;
@@ -46,12 +41,7 @@ export interface Village {
   disbursed: number;
   /** reported utilization, in ₹ lakh (MODELLED) */
   utilized: number;
-  /** restoration deadline, days */
-  deadlineDays: number;
   status: VillageStatus;
-  /** restoration progress when not completed (MODELLED) */
-  progress: number;
-  completedOn?: string;
   mismatch?: { reported: number; expected: number };
   /** Census 2011 population, only where a source was verified */
   population2011?: number;
@@ -242,16 +232,10 @@ export const fmtL = (v: number) => `₹${v.toFixed(1)}L`;
 export const fmtFull = (v: number) =>
   `₹${Math.round(v * 100000).toLocaleString("en-IN")}`;
 
-/** Restoration progress for a village (100% once completed). */
-export const recoveryPct = (v: Village) =>
-  v.status === "COMPLETED" ? 100 : v.progress;
-
 export const statusLabel: Record<VillageStatus, string> = {
   PENDING: "PENDING",
   ALLOCATED: "ALLOCATED",
   DISBURSED: "DISBURSED",
-  DUE: "RESTORATION DUE",
-  COMPLETED: "COMPLETED",
 };
 
 /* ---------- Kerala 2018 — Idukki district ---------- */
@@ -259,59 +243,58 @@ export const initialVillages: Village[] = [
   {
     id: "vellathooval", name: "Vellathooval", lat: 9.9843, lng: 77.0101,
     families: 5380, severity: "High", approved: 8.5, disbursed: 8.5,
-    utilized: 6.8, deadlineDays: 30, status: "ALLOCATED", progress: 80,
+    utilized: 6.8, status: "ALLOCATED", 
     population2011: 25701, coordsVerified: true,
   },
   {
     id: "adimali", name: "Adimali", lat: 10.0148, lng: 76.9561,
     families: 8490, severity: "Moderate", approved: 6.2, disbursed: 6.2,
-    utilized: 4.9, deadlineDays: 30, status: "DISBURSED", progress: 80,
+    utilized: 4.9, status: "DISBURSED", 
     population2011: 40484, coordsVerified: true,
   },
   {
     id: "kattappana", name: "Kattappana", lat: 9.7542, lng: 77.1158,
     families: 7800, severity: "High", approved: 10.4, disbursed: 0,
-    utilized: 0, deadlineDays: 30, status: "PENDING", progress: 50,
+    utilized: 0, status: "PENDING", 
     mismatch: { reported: 8.2, expected: 7.1 }, coordsVerified: true,
   },
   {
     id: "munnar", name: "Munnar", lat: 10.0892, lng: 77.0597,
     families: 6600, severity: "Moderate", approved: 7.6, disbursed: 7.6,
-    utilized: 7.6, deadlineDays: 30, status: "COMPLETED", progress: 100,
-    completedOn: "12 Sep 2018", coordsVerified: true,
+    utilized: 7.6, status: "DISBURSED",  coordsVerified: true,
   },
   {
     id: "cheruthoni", name: "Cheruthoni", lat: 9.8582, lng: 76.9618,
     families: 4900, severity: "High", approved: 9.1, disbursed: 0,
-    utilized: 0, deadlineDays: 30, status: "PENDING", progress: 40,
+    utilized: 0, status: "PENDING", 
     coordsVerified: true,
   },
   {
     id: "nedumkandam", name: "Nedumkandam", lat: 9.843, lng: 77.1519,
     families: 6100, severity: "Low", approved: 8.2, disbursed: 0,
-    utilized: 0, deadlineDays: 30, status: "ALLOCATED", progress: 45,
+    utilized: 0, status: "ALLOCATED", 
     coordsVerified: true,
   },
 ];
 
 /* ---------- Amphan 2020 — Purba Medinipur coast ---------- */
 const AMPHAN_VILLAGES: Village[] = [
-  { id: "contai", name: "Contai", lat: 21.7792, lng: 87.7446, families: 148, severity: "High", approved: 9.4, disbursed: 9.4, utilized: 7.1, deadlineDays: 30, status: "DISBURSED", progress: 74, coordsVerified: true },
-  { id: "digha", name: "Digha", lat: 21.6384, lng: 87.5096, families: 132, severity: "High", approved: 8.8, disbursed: 0, utilized: 0, deadlineDays: 30, status: "PENDING", progress: 38, mismatch: { reported: 6.4, expected: 5.2 }, coordsVerified: true },
-  { id: "majna", name: "Majna", lat: 21.7757, lng: 87.675, families: 908, severity: "Moderate", approved: 6.7, disbursed: 6.7, utilized: 5.1, deadlineDays: 30, status: "ALLOCATED", progress: 55, population2011: 4653, coordsVerified: true },
-  { id: "shankarpur", name: "Shankarpur", lat: 21.625, lng: 87.52, families: 84, severity: "Moderate", approved: 5.9, disbursed: 5.9, utilized: 5.9, deadlineDays: 30, status: "COMPLETED", progress: 100, completedOn: "24 Jun 2020", coordsVerified: false },
-  { id: "ramnagar", name: "Ramnagar", lat: 21.78, lng: 87.61, families: 96, severity: "Moderate", approved: 6.4, disbursed: 6.4, utilized: 4.3, deadlineDays: 30, status: "ALLOCATED", progress: 62, coordsVerified: false },
-  { id: "kulberia", name: "Kulberia", lat: 21.76, lng: 87.68, families: 71, severity: "Low", approved: 4.8, disbursed: 0, utilized: 0, deadlineDays: 30, status: "PENDING", progress: 30, coordsVerified: false },
+  { id: "contai", name: "Contai", lat: 21.7792, lng: 87.7446, families: 148, severity: "High", approved: 9.4, disbursed: 9.4, utilized: 7.1, status: "DISBURSED", coordsVerified: true },
+  { id: "digha", name: "Digha", lat: 21.6384, lng: 87.5096, families: 132, severity: "High", approved: 8.8, disbursed: 0, utilized: 0, status: "PENDING", mismatch: { reported: 6.4, expected: 5.2 }, coordsVerified: true },
+  { id: "majna", name: "Majna", lat: 21.7757, lng: 87.675, families: 908, severity: "Moderate", approved: 6.7, disbursed: 6.7, utilized: 5.1, status: "ALLOCATED", population2011: 4653, coordsVerified: true },
+  { id: "shankarpur", name: "Shankarpur", lat: 21.625, lng: 87.52, families: 84, severity: "Moderate", approved: 5.9, disbursed: 5.9, utilized: 5.9, status: "DISBURSED", coordsVerified: false },
+  { id: "ramnagar", name: "Ramnagar", lat: 21.78, lng: 87.61, families: 96, severity: "Moderate", approved: 6.4, disbursed: 6.4, utilized: 4.3, status: "ALLOCATED", coordsVerified: false },
+  { id: "kulberia", name: "Kulberia", lat: 21.76, lng: 87.68, families: 71, severity: "Low", approved: 4.8, disbursed: 0, utilized: 0, status: "PENDING", coordsVerified: false },
 ];
 
 /* ---------- Wayanad 2024 — Meppadi slope ---------- */
 const WAYANAD_VILLAGES: Village[] = [
-  { id: "punjirimattom", name: "Punjirimattom", lat: 11.4646, lng: 76.1348, families: 118, severity: "High", approved: 9.9, disbursed: 9.9, utilized: 8.7, deadlineDays: 30, status: "DISBURSED", progress: 84, coordsVerified: true },
-  { id: "mundakkai", name: "Mundakkai", lat: 11.472, lng: 76.142, families: 137, severity: "High", approved: 8.1, disbursed: 0, utilized: 0, deadlineDays: 30, status: "PENDING", progress: 42, mismatch: { reported: 6.9, expected: 5.8 }, coordsVerified: false },
-  { id: "chooralmala", name: "Chooralmala", lat: 11.4992, lng: 76.1601, families: 66, severity: "Moderate", approved: 5.2, disbursed: 5.2, utilized: 3.8, deadlineDays: 30, status: "ALLOCATED", progress: 58, coordsVerified: true },
-  { id: "attamala", name: "Attamala", lat: 11.485, lng: 76.15, families: 89, severity: "Moderate", approved: 4.6, disbursed: 4.6, utilized: 4.6, deadlineDays: 30, status: "COMPLETED", progress: 100, completedOn: "26 Aug 2024", coordsVerified: false },
-  { id: "meppadi", name: "Meppadi", lat: 11.49, lng: 76.125, families: 54, severity: "Low", approved: 3.9, disbursed: 0, utilized: 0, deadlineDays: 30, status: "PENDING", progress: 22, coordsVerified: false },
-  { id: "vellarimala", name: "Vellarimala", lat: 11.46, lng: 76.145, families: 47, severity: "Low", approved: 4.8, disbursed: 4.8, utilized: 3.6, deadlineDays: 30, status: "ALLOCATED", progress: 49, coordsVerified: false },
+  { id: "punjirimattom", name: "Punjirimattom", lat: 11.4646, lng: 76.1348, families: 118, severity: "High", approved: 9.9, disbursed: 9.9, utilized: 8.7, status: "DISBURSED", coordsVerified: true },
+  { id: "mundakkai", name: "Mundakkai", lat: 11.472, lng: 76.142, families: 137, severity: "High", approved: 8.1, disbursed: 0, utilized: 0, status: "PENDING", mismatch: { reported: 6.9, expected: 5.8 }, coordsVerified: false },
+  { id: "chooralmala", name: "Chooralmala", lat: 11.4992, lng: 76.1601, families: 66, severity: "Moderate", approved: 5.2, disbursed: 5.2, utilized: 3.8, status: "ALLOCATED", coordsVerified: true },
+  { id: "attamala", name: "Attamala", lat: 11.485, lng: 76.15, families: 89, severity: "Moderate", approved: 4.6, disbursed: 4.6, utilized: 4.6, status: "DISBURSED", coordsVerified: false },
+  { id: "meppadi", name: "Meppadi", lat: 11.49, lng: 76.125, families: 54, severity: "Low", approved: 3.9, disbursed: 0, utilized: 0, status: "PENDING", coordsVerified: false },
+  { id: "vellarimala", name: "Vellarimala", lat: 11.46, lng: 76.145, families: 47, severity: "Low", approved: 4.8, disbursed: 4.8, utilized: 3.6, status: "ALLOCATED", coordsVerified: false },
 ];
 
 /* ---------- Multi-event registry ---------------------------------------- */

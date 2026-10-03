@@ -16,8 +16,13 @@ import {
   getDamageZones,
   type DamageZone,
 } from "@/lib/damageAnalysis";
-import { BasemapToggle, MapTiles, type BasemapMode } from "@/components/MapBasemap";
-import { basemapMaxZoom } from "@/lib/mapTiles";
+import {
+  MapControls,
+  MapTiles,
+  type BasemapMode,
+  type TileProvider,
+} from "@/components/MapBasemap";
+import { basemapMaxZoom, tileGradeClass } from "@/lib/mapTiles";
 
 export interface SatelliteMapProps {
   scenario: ScenarioMeta;
@@ -25,6 +30,8 @@ export interface SatelliteMapProps {
   showDamageZones?: boolean;
   onBoundsReady?: (bounds: L.LatLngBounds) => void;
   damageZones?: DamageZone[];
+  provider: TileProvider;
+  onProviderChange: (provider: TileProvider) => void;
 }
 
 function BoundsReporter({
@@ -61,6 +68,8 @@ export function SatelliteMap({
   showDamageZones = variant === "post",
   onBoundsReady,
   damageZones: externalZones,
+  provider,
+  onProviderChange,
 }: SatelliteMapProps) {
   const zones = useMemo(
     () => externalZones ?? getDamageZones(scenario),
@@ -77,13 +86,13 @@ export function SatelliteMap({
       zoom={scenario.zoom}
       scrollWheelZoom={false}
       minZoom={scenario.type === "Cyclone" ? 9 : 10}
-      maxZoom={basemapMaxZoom(basemap)}
+      maxZoom={basemapMaxZoom(basemap, provider)}
       className={`h-full min-h-0 w-full ${
         variant === "pre" && basemap === "satellite" ? "sat-pre" : "sat-post"
-      }`}
+      } ${tileGradeClass(provider)}`}
       style={{ background: "var(--map-bg)", height: "100%", width: "100%" }}
     >
-      <MapTiles mode={basemap} />
+      <MapTiles mode={basemap} provider={provider} />
       <BoundsReporter onBoundsReady={onBoundsReady} />
 
       {showDamageZones &&
@@ -109,7 +118,12 @@ export function SatelliteMap({
 
       {showDamageZones && <DamageFootprint zones={zones} />}
     </MapContainer>
-    <BasemapToggle mode={basemap} onChange={setBasemap} />
+    <MapControls
+      mode={basemap}
+      onChange={setBasemap}
+      provider={provider}
+      onProviderChange={onProviderChange}
+    />
     </>
   );
 }
